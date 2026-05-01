@@ -73,6 +73,14 @@ public fun AboutTabContent(
         Text(
             text = stringResource(id = R.string.app_tab_about_origin_note)
         )
+        Text(
+            text = stringResource(id = R.string.app_tab_about_recording_location),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+        )
+        Text(
+            text = stringResource(id = R.string.app_tab_about_recording_filename),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+        )
 
         Column(modifier = Modifier.width(IntrinsicSize.Max)) {
             TextButton(

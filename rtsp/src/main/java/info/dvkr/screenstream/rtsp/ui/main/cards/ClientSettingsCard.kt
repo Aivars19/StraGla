@@ -1,5 +1,10 @@
 package info.dvkr.screenstream.rtsp.ui.main.cards
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -33,6 +39,7 @@ import info.dvkr.screenstream.rtsp.settings.RtspSettings
 import info.dvkr.screenstream.rtsp.ui.main.settings.client.ClientProtocolEditor
 import info.dvkr.screenstream.rtsp.ui.main.settings.client.ClientProtocolRow
 import info.dvkr.screenstream.rtsp.ui.main.settings.common.RtspSettingModal
+import info.dvkr.screenstream.rtsp.ui.main.settings.common.SettingSwitchRow
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,6 +54,13 @@ internal fun ClientSettingsCard(
     val selectedSheet = rememberSaveable { mutableStateOf<ClientSettingSheet?>(null) }
     val expanded = rememberSaveable { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
+
+    val requestStoragePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            updateSettings { copy(enableFileSaveOutput = true) }
+        }
+    }
 
     var serverAddressField by rememberSaveable(stateSaver = TextFieldValue.Saver) {
         mutableStateOf(TextFieldValue(settings.serverAddress))
@@ -73,7 +87,7 @@ internal fun ClientSettingsCard(
         commitServerAddress(serverAddressField.text)
     }
 
-    val serverAddressError = runCatching { RtspUrl.parse(serverAddressField.text) }.isFailure
+    val serverAddressError = settings.enableRtspOutput && runCatching { RtspUrl.parse(serverAddressField.text) }.isFailure
 
     ExpandableCard(
         expanded = expanded.value,
@@ -92,6 +106,38 @@ internal fun ClientSettingsCard(
         },
         modifier = modifier
     ) {
+        SettingSwitchRow(
+            enabled = enabled,
+            checked = settings.enableRtspOutput,
+            iconRes = R.drawable.settings_ethernet_24px,
+            title = stringResource(R.string.rtsp_output_rtsp_title),
+            summary = stringResource(R.string.rtsp_output_rtsp_summary),
+            onValueChange = { value ->
+                if (settings.enableRtspOutput != value) {
+                    updateSettings { copy(enableRtspOutput = value) }
+                }
+            }
+        )
+
+        SettingSwitchRow(
+            enabled = enabled,
+            checked = settings.enableFileSaveOutput,
+            iconRes = R.drawable.content_copy_24px,
+            title = stringResource(R.string.rtsp_output_save_title),
+            summary = stringResource(R.string.rtsp_output_save_summary),
+            onValueChange = { value ->
+                val needsLegacyStoragePermission =
+                    value && Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+                        context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+
+                if (needsLegacyStoragePermission) {
+                    requestStoragePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                } else if (settings.enableFileSaveOutput != value) {
+                    updateSettings { copy(enableFileSaveOutput = value) }
+                }
+            }
+        )
+
         OutlinedTextField(
             value = serverAddressField,
             onValueChange = { serverAddressField = it },
@@ -120,7 +166,7 @@ internal fun ClientSettingsCard(
         )
 
         ClientProtocolRow(
-            enabled = enabled,
+            enabled = enabled && settings.enableRtspOutput,
             protocol = settings.clientProtocol
         ) { selectedSheet.value = ClientSettingSheet.Protocol }
 

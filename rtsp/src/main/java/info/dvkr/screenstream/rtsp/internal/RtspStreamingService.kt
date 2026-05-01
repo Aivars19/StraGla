@@ -144,6 +144,7 @@ internal class RtspStreamingService(
         val videoEncoder: VideoEncoder,
         var captureSurface: Surface,
         var audioEncoder: AudioEncoder? = null,
+        var fileRecorder: Fmp4Recorder? = null,
         var deviceConfiguration: Configuration,
         val onVideoReconfigureStart: () -> Unit = {}
     ) {
@@ -154,6 +155,7 @@ internal class RtspStreamingService(
             runCatching { captureSurface.release() }
 
             audioEncoder?.stop()
+            fileRecorder?.stop()
 
             mediaProjection.unregisterCallback(projectionCallback)
         }
@@ -614,7 +616,14 @@ internal class RtspStreamingService(
                     XLog.d(getLog("StartStream", "Already streaming. Ignoring."))
                     return
                 }
-                val audioEnabled = rtspSettings.data.value.enableMic || rtspSettings.data.value.enableDeviceAudio
+                val settings = rtspSettings.data.value
+                if (!settings.enableRtspOutput && !settings.enableFileSaveOutput) {
+                    currentError = RtspError.ClientError.OutputsDisabled()
+                    XLog.i(getLog("StartStream", "Both outputs disabled. Ignoring."))
+                    return
+                }
+
+                val audioEnabled = settings.enableMic || settings.enableDeviceAudio
                 val blockedByError = currentError != null && currentError !is RtspError.ClientError
                 val notReady = blockedByError || clientController == null || selectedVideoEncoderInfo == null || (audioEnabled && selectedAudioEncoderInfo == null)
                 if (notReady) {
@@ -688,6 +697,29 @@ internal class RtspStreamingService(
                 }
 
                 val settings = rtspSettings.data.value
+                val rtspOutputEnabled = settings.enableRtspOutput
+                val fileSaveEnabled = settings.enableFileSaveOutput
+
+                if (!rtspOutputEnabled && !fileSaveEnabled) {
+                    clearPreparedProjectionStartIfNeeded(event.foregroundStartProcessed, event.foregroundStartError)
+                    projectionState.pendingStartAttemptId = null
+                    sessionAnalyticsTracker.onStartFailed(StartFailGroup.UNKNOWN)
+                    currentError = RtspError.ClientError.OutputsDisabled()
+                    return
+                }
+
+                if (fileSaveEnabled && Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                    val canWriteSharedStorage =
+                        ContextCompat.checkSelfPermission(service, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+                    if (!canWriteSharedStorage) {
+                        clearPreparedProjectionStartIfNeeded(event.foregroundStartProcessed, event.foregroundStartError)
+                        projectionState.pendingStartAttemptId = null
+                        sessionAnalyticsTracker.onStartFailed(StartFailGroup.UNKNOWN)
+                        currentError = RtspError.ClientError.SaveFailed(service.getString(R.string.rtsp_save_permission_required))
+                        return
+                    }
+                }
+
                 val audioEnabled = settings.enableMic || settings.enableDeviceAudio
 
                 if (audioEnabled && selectedAudioEncoderInfo == null) {
@@ -704,22 +736,62 @@ internal class RtspStreamingService(
                     return
                 }
 
-                val clientRtspUrl = try {
-                    RtspUrl.parse(settings.serverAddress)
-                } catch (e: URISyntaxException) {
+                val clientRtspUrl = if (rtspOutputEnabled) {
+                    try {
+                        RtspUrl.parse(settings.serverAddress)
+                    } catch (e: URISyntaxException) {
+                        clearPreparedProjectionStartIfNeeded(event.foregroundStartProcessed, event.foregroundStartError)
+                        projectionState.pendingStartAttemptId = null
+                        XLog.w(getLog("StartProjection", "Bad RTSP URL: ${settings.serverAddress}"), e)
+                        sessionAnalyticsTracker.onStartFailed(StartFailGroup.UNKNOWN)
+                        stopStream(stopServer = true, stopReason = "StartProjectionInvalidRtspUrl")
+                        currentError = RtspError.ClientError.Failed(e.reason ?: e.message)
+                        clientController.status = RtspClientStatus.ERROR
+                        return
+                    }
+                } else {
+                    null
+                }
+
+                if (fileSaveEnabled && selectedVideoEncoderInfo?.codec !is Codec.Video.H264 && selectedVideoEncoderInfo?.codec !is Codec.Video.H265) {
                     clearPreparedProjectionStartIfNeeded(event.foregroundStartProcessed, event.foregroundStartError)
                     projectionState.pendingStartAttemptId = null
-                    XLog.w(getLog("StartProjection", "Bad RTSP URL: ${settings.serverAddress}"), e)
                     sessionAnalyticsTracker.onStartFailed(StartFailGroup.UNKNOWN)
-                    stopStream(stopServer = true, stopReason = "StartProjectionInvalidRtspUrl")
-                    currentError = RtspError.ClientError.Failed(e.reason ?: e.message)
-                    clientController.status = RtspClientStatus.ERROR
+                    currentError = RtspError.ClientError.SaveUnsupportedVideoCodec()
                     return
                 }
 
-                val setVideoParams: (VideoParams) -> Unit = { video -> clientController.setVideoParams(video) }
-                val setAudioParams: (AudioParams?) -> Unit = { audio -> clientController.setAudioParams(audio) }
-                val onFrame: (MediaFrame) -> Unit = { frame -> clientController.onFrame(frame) }
+                if (fileSaveEnabled && audioEnabled && selectedAudioEncoderInfo?.codec !is Codec.Audio.AAC) {
+                    clearPreparedProjectionStartIfNeeded(event.foregroundStartProcessed, event.foregroundStartError)
+                    projectionState.pendingStartAttemptId = null
+                    sessionAnalyticsTracker.onStartFailed(StartFailGroup.UNKNOWN)
+                    currentError = RtspError.ClientError.SaveUnsupportedAudioCodec()
+                    return
+                }
+
+                var fileRecorder: Fmp4Recorder? = null
+                val setVideoParams: (VideoParams) -> Unit = { video ->
+                    if (rtspOutputEnabled) clientController.setVideoParams(video)
+                    fileRecorder?.setVideoParams(video)
+                }
+                val setAudioParams: (AudioParams?) -> Unit = { audio ->
+                    if (rtspOutputEnabled) clientController.setAudioParams(audio)
+                    fileRecorder?.setAudioParams(audio)
+                }
+                val onFrame: (MediaFrame) -> Unit = { frame ->
+                    val recorder = fileRecorder
+                    when {
+                        rtspOutputEnabled && recorder != null -> {
+                            val copy = frame.detachedCopy()
+                            clientController.onFrame(frame)
+                            recorder.onFrame(copy)
+                        }
+
+                        rtspOutputEnabled -> clientController.onFrame(frame)
+                        recorder != null -> recorder.onFrame(frame)
+                        else -> frame.release()
+                    }
+                }
 
                 val audioPermissionGranted =
                     ContextCompat.checkSelfPermission(service, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
@@ -763,6 +835,24 @@ internal class RtspStreamingService(
                             sourceWidth, sourceHeight, settings.videoResizeFactor / 100
                         )
 
+                        if (fileSaveEnabled) {
+                            val recorder = try {
+                                Fmp4Recorder(
+                                    context = service,
+                                    encodedWidth = encodedWidth,
+                                    encodedHeight = encodedHeight,
+                                    expectAudioTrack = wantsMicrophoneForSession || wantsDeviceAudioForSession
+                                )
+                            } catch (cause: Throwable) {
+                                XLog.w(getLog("StartProjection", "Recorder init failed"), cause)
+                                currentError = RtspError.ClientError.SaveFailed(cause.message)
+                                mediaProjection.unregisterCallback(projectionCallback)
+                                return@startProjection false
+                            }
+                            fileRecorder = recorder
+                            XLog.i(getLog("StartProjection", "File recording: ${recorder.outputPath}"))
+                        }
+
                         val videoEncoder = VideoEncoder(
                             codecInfo = videoEncoderInfo,
                             onVideoInfo = { sps, pps, vps ->
@@ -786,6 +876,7 @@ internal class RtspStreamingService(
                             if (!isStartupStillValid()) {
                                 XLog.i(getLog("StartProjection", "Startup invalidated before virtual display creation."))
                                 stop()
+                                fileRecorder?.stop()
                                 mediaProjection.unregisterCallback(projectionCallback)
                                 return@startProjection false
                             }
@@ -808,6 +899,7 @@ internal class RtspStreamingService(
                                 val reason = if (virtualDisplay == null) "virtualDisplay is null" else "startup invalidated"
                                 XLog.i(getLog("startDisplayCapture", "$reason. Stopping projection."))
                                 stop()
+                                fileRecorder?.stop()
                                 mediaProjection.unregisterCallback(projectionCallback)
                                 runCatching { captureSurface?.release() }
                                 return@startProjection false
@@ -885,6 +977,7 @@ internal class RtspStreamingService(
                             virtualDisplay?.release()
                             runCatching { captureSurface?.release() }
                             audioEncoder?.stop()
+                            fileRecorder?.stop()
                             mediaProjection.unregisterCallback(projectionCallback)
                             return@startProjection false
                         }
@@ -896,10 +989,12 @@ internal class RtspStreamingService(
                             captureSurface = captureSurface ?: run {
                                 XLog.i(getLog("StartProjection", "captureSurface is null. Stopping projection."))
                                 videoEncoder.stop()
+                                fileRecorder?.stop()
                                 mediaProjection.unregisterCallback(projectionCallback)
                                 return@startProjection false
                             },
                             audioEncoder = audioEncoder,
+                            fileRecorder = fileRecorder,
                             deviceConfiguration = deviceConfiguration,
                             onVideoReconfigureStart = { clientController.beginVideoReconfigure() }
                         )
@@ -938,13 +1033,17 @@ internal class RtspStreamingService(
                 }
                 when (startResult) {
                     is ProjectionCoordinator.StartResult.Started -> {
-                        val microphoneEnabledForSession = wantsMicrophoneForSession && startResult.audioCaptureAllowed
-                        val audioEnabledForSession = wantsDeviceAudioForSession || microphoneEnabledForSession
-                        val onlyVideo = audioCaptureDisabled || !audioEnabledForSession
-                        clientController.startClient(clientRtspUrl, onlyVideo)
-                        projectionState.lastVideoParams?.let { clientController.setVideoParams(it) }
-                        clientController.setAudioParams(projectionState.lastAudioParams)
-                        clientController.connect()
+                        if (rtspOutputEnabled && clientRtspUrl != null) {
+                            val microphoneEnabledForSession = wantsMicrophoneForSession && startResult.audioCaptureAllowed
+                            val audioEnabledForSession = wantsDeviceAudioForSession || microphoneEnabledForSession
+                            val onlyVideo = audioCaptureDisabled || !audioEnabledForSession
+                            clientController.startClient(clientRtspUrl, onlyVideo)
+                            projectionState.lastVideoParams?.let { clientController.setVideoParams(it) }
+                            clientController.setAudioParams(projectionState.lastAudioParams)
+                            clientController.connect()
+                        } else {
+                            clientController.status = RtspClientStatus.IDLE
+                        }
                         currentError = null
                         sessionAnalyticsTracker.onStarted(currentActiveConsumersCount())
                         XLog.i(getLog("StartProjection", "SP_TRACE route=preflight_v1 stage=result status=started startAttemptId=${event.startAttemptId} mode=$modeLocal audioMode=$audioMode phase=$startPhase cachedIntent=${projectionState.cachedIntent != null}"))

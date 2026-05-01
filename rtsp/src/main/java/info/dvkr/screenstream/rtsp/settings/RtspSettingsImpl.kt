@@ -65,6 +65,12 @@ internal class RtspSettingsImpl(
                 if (newSettings.clientProtocol != RtspSettings.Default.CLIENT_PROTOCOL)
                     set(RtspSettings.Key.CLIENT_PROTOCOL, newSettings.clientProtocol.name)
 
+                if (newSettings.enableRtspOutput != RtspSettings.Default.ENABLE_RTSP_OUTPUT)
+                    set(RtspSettings.Key.ENABLE_RTSP_OUTPUT, newSettings.enableRtspOutput)
+
+                if (newSettings.enableFileSaveOutput != RtspSettings.Default.ENABLE_FILE_SAVE_OUTPUT)
+                    set(RtspSettings.Key.ENABLE_FILE_SAVE_OUTPUT, newSettings.enableFileSaveOutput)
+
                 // Client-only build: always keep mode at default (CLIENT).
 
                 if (newSettings.videoCodecAutoSelect != RtspSettings.Default.VIDEO_CODEC_AUTO_SELECT)
@@ -134,6 +140,8 @@ internal class RtspSettingsImpl(
             this[RtspSettings.Key.CLIENT_PROTOCOL]?.uppercase()?.let { RtspSettings.Values.ProtocolPolicy.valueOf(it) }
         }.getOrNull() ?: RtspSettings.Default.CLIENT_PROTOCOL,
         mode = RtspSettings.Values.Mode.CLIENT,
+        enableRtspOutput = this[RtspSettings.Key.ENABLE_RTSP_OUTPUT] ?: RtspSettings.Default.ENABLE_RTSP_OUTPUT,
+        enableFileSaveOutput = this[RtspSettings.Key.ENABLE_FILE_SAVE_OUTPUT] ?: RtspSettings.Default.ENABLE_FILE_SAVE_OUTPUT,
 
         videoCodecAutoSelect = this[RtspSettings.Key.VIDEO_CODEC_AUTO_SELECT] ?: RtspSettings.Default.VIDEO_CODEC_AUTO_SELECT,
         videoCodec = this[RtspSettings.Key.VIDEO_CODEC] ?: RtspSettings.Default.VIDEO_CODEC,

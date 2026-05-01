@@ -44,6 +44,10 @@ internal sealed class RtspError(@field:StringRes open val id: Int, override val 
         internal class AccessDenied() : ClientError(R.string.rtsp_connection_access_denied)
         internal class NoCredentialsError : ClientError(R.string.rtsp_connection_no_credentials)
         internal class AuthError : ClientError(R.string.rtsp_connection_invalid_credentials)
+        internal class OutputsDisabled : ClientError(R.string.rtsp_outputs_disabled)
+        internal class SaveUnsupportedVideoCodec : ClientError(R.string.rtsp_save_unsupported_video_codec)
+        internal class SaveUnsupportedAudioCodec : ClientError(R.string.rtsp_save_unsupported_audio_codec)
+        internal class SaveFailed(override val message: String?) : ClientError(R.string.rtsp_save_failed)
     }
 
     internal open fun toString(context: Context): String = if (id != 0) context.getString(id) else message ?: toString()

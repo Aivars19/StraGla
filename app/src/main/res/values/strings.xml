@@ -75,4 +75,6 @@
     <string name="app_tab_about_privacy_options">Privacy options</string>
     <string name="app_tab_about_license">Upstream license (original parts)</string>
     <string name="app_tab_about_origin_note">Built as StraGla; original parts derived from ScreenStream.</string>
+    <string name="app_tab_about_recording_location">Recordings save path: Movies/StraGla/</string>
+    <string name="app_tab_about_recording_filename">Filename format: yyyy-MM-ddTHH-mm-ss.fmp4</string>
 </resources>

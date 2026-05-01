@@ -133,7 +133,8 @@ internal fun RtspMainScreenUI(
 
         val doubleClickProtection = remember { DoubleClickProtection.get() }
 
-        val mediaServerUrlError = runCatching { RtspUrl.parse(settings.serverAddress) }.isFailure
+        val mediaServerUrlError = settings.enableRtspOutput && runCatching { RtspUrl.parse(settings.serverAddress) }.isFailure
+        val hasAnyOutputEnabled = settings.enableRtspOutput || settings.enableFileSaveOutput
 
         Button(
             onClick = dropUnlessStarted {
@@ -148,7 +149,7 @@ internal fun RtspMainScreenUI(
             modifier = Modifier
                 .padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
                 .align(alignment = Alignment.BottomCenter),
-            enabled = state.isBusy.not() && mediaServerUrlError.not(),
+            enabled = state.isBusy.not() && hasAnyOutputEnabled && mediaServerUrlError.not(),
             shape = MaterialTheme.shapes.medium,
             contentPadding = PaddingValues(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 16.dp),
             elevation = ButtonDefaults.buttonElevation(
