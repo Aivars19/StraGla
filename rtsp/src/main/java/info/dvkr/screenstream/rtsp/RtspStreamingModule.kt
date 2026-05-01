@@ -12,7 +12,6 @@ import info.dvkr.screenstream.common.getLog
 import info.dvkr.screenstream.common.module.StreamingModule
 import info.dvkr.screenstream.rtsp.internal.RtspEvent
 import info.dvkr.screenstream.rtsp.internal.RtspStreamingService
-import info.dvkr.screenstream.rtsp.settings.RtspSettings
 import info.dvkr.screenstream.rtsp.ui.RtspClientStatus
 import info.dvkr.screenstream.rtsp.ui.RtspMainScreenUI
 import info.dvkr.screenstream.rtsp.ui.RtspState
@@ -49,12 +48,7 @@ public class RtspStreamingModule : StreamingModule {
 
     override val hasActiveConsumer: Flow<Boolean>
         get() = _rtspStateFlow
-            .map { state ->
-                when (state.mode) {
-                    RtspSettings.Values.Mode.SERVER -> state.serverClientStats.any { it.lastSentAtMs > 0L }
-                    RtspSettings.Values.Mode.CLIENT -> state.clientStatus == RtspClientStatus.ACTIVE
-                }
-            }
+            .map { state -> state.clientStatus == RtspClientStatus.ACTIVE }
             .distinctUntilChanged()
 
     override val nameResource: Int = R.string.rtsp_stream_mode

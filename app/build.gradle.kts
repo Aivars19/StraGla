@@ -1,12 +1,6 @@
-import com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension
-import com.google.gms.googleservices.GoogleServicesPlugin
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.googleServices)
-    alias(libs.plugins.firebaseCrashlytics)
 }
 
 kotlin {
@@ -70,22 +64,6 @@ android {
     productFlavors {
         create("FDroid") {
             dimension = "Default"
-            manifestPlaceholders += mapOf("adMobPubId" to "")
-            configure<CrashlyticsExtension> {
-                mappingFileUploadEnabled = false
-                nativeSymbolUploadEnabled = false
-            }
-        }
-        create("PlayStore") {
-            dimension = "Default"
-            val localProps = Properties()
-            File(rootProject.rootDir, "local.properties").apply { if (exists() && isFile) inputStream().use { localProps.load(it) } }
-            manifestPlaceholders += mapOf("adMobPubId" to localProps.getProperty("ad.pubId", "\"\""))
-            buildConfigField("String", "AD_UNIT_IDS", localProps.getProperty("ad.unitIds", "\"[]\""))
-            configure<CrashlyticsExtension> {
-                mappingFileUploadEnabled = true
-                nativeSymbolUploadEnabled = true
-            }
         }
     }
 
@@ -102,20 +80,6 @@ android {
     }
 }
 
-googleServices {
-    // Play Store variants provide google-services.json; FDroid variants do not.
-    missingGoogleServicesStrategy = GoogleServicesPlugin.MissingGoogleServicesStrategy.IGNORE
-}
-
-tasks.configureEach {
-    if (name.startsWith("processFDroid") && name.endsWith("GoogleServices")) {
-        enabled = false
-    }
-    if (name.contains("FDroid") && name.startsWith("injectCrashlytics")) {
-        enabled = false
-    }
-}
-
 dependencies {
     coreLibraryDesugaring(libs.android.tools.desugar)
 
@@ -127,18 +91,5 @@ dependencies {
     implementation(libs.androidx.compose.material3.adaptive.navigation)
     implementation(libs.processPhoenix)
 
-    implementation(projects.mjpeg)
     implementation(projects.rtsp)
-
-    "PlayStoreImplementation"(projects.webrtc)
-    "PlayStoreImplementation"(libs.play.services.tasks)
-    "PlayStoreImplementation"(libs.play.app.update)
-    "PlayStoreImplementation"(libs.play.app.review)
-    "PlayStoreImplementation"(libs.play.services.ads)
-    "PlayStoreImplementation"("androidx.work:work-runtime:2.11.2") // Override the old transitive WorkManager from play-services-ads for AGP 9.x compatibility.
-    "PlayStoreImplementation"(libs.webkit)
-    "PlayStoreImplementation"(platform(libs.firebase.bom))
-    "PlayStoreImplementation"(libs.firebase.analytics)
-    "PlayStoreImplementation"(libs.firebase.crashlytics)
-    "PlayStoreImplementation"(libs.firebase.crashlytics.ndk)
 }

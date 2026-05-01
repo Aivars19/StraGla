@@ -1,7 +1,6 @@
 package info.dvkr.screenstream.ui.tabs.about
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,8 +14,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,18 +21,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import info.dvkr.screenstream.AdMob
 import info.dvkr.screenstream.R
-import info.dvkr.screenstream.common.findActivity
 import info.dvkr.screenstream.common.getVersionName
 import info.dvkr.screenstream.common.openStringUrl
-import info.dvkr.screenstream.logger.AppLogger
-import org.koin.compose.koinInject
 
 @Composable
 public fun AboutTabContent(
     modifier: Modifier = Modifier,
-    adMob: AdMob = koinInject()
 ) {
     Column(
         modifier = modifier.verticalScroll(rememberScrollState()),
@@ -138,22 +130,6 @@ public fun AboutTabContent(
                 Text(text = stringResource(id = R.string.app_tab_about_privacy_policy), maxLines = 1)
             }
 
-            if (adMob.isPrivacyOptionsRequired) {
-                TextButton(
-                    onClick = { adMob.showPrivacyOptionsForm(context.findActivity()) },
-                    modifier = Modifier
-                        .padding(vertical = 4.dp)
-                        .fillMaxWidth()
-
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.receipt_long_24px),
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                    Text(text = stringResource(id = R.string.app_tab_about_privacy_options), maxLines = 1)
-                }
-            }
 
             TextButton(
                 onClick = { context.openStringUrl("https://github.com/dkrivoruchko/ScreenStream/blob/master/LICENSE") },

@@ -57,7 +57,18 @@ import info.dvkr.screenstream.rtsp.settings.RtspSettings
 import info.dvkr.screenstream.rtsp.ui.main.media.EncoderItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.roundToInt
+
+private val RESIZE_STOPS_PERCENT: List<Float> = listOf(25f, 50f, 75f, 100f)
+private val FPS_STOPS: List<Int> = listOf(2, 4, 8, 12, 16, 24, 30)
+private val BITRATE_STOPS_KBITS: List<Int> = listOf(400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2500, 3000, 3500, 4000, 4500, 5000)
+
+private fun nearestIndex(values: List<Int>, target: Int): Int =
+    values.indices.minByOrNull { index -> abs(values[index] - target) } ?: 0
+
+private fun nearestResizeIndex(target: Float): Int =
+    RESIZE_STOPS_PERCENT.indices.minByOrNull { index -> abs(RESIZE_STOPS_PERCENT[index] - target) } ?: 0
 
 @Composable
 internal fun VideoCard(
@@ -262,29 +273,38 @@ private fun ImageSize(
 ) {
     Column(modifier = modifier) {
         var counter by remember { mutableLongStateOf(0) }
-        var sliderPosition by remember(resizeFactor, counter) { mutableFloatStateOf(resizeFactor) }
+        var sliderPosition by remember(resizeFactor, counter) {
+            mutableFloatStateOf(nearestResizeIndex(resizeFactor).toFloat())
+        }
+        val selectedResizePercent = RESIZE_STOPS_PERCENT[sliderPosition.roundToInt().coerceIn(0, RESIZE_STOPS_PERCENT.lastIndex)]
         var currentResultSize by remember(resultSize, counter) { mutableStateOf(resultSize) }
         val scope = rememberCoroutineScope()
 
-        Text(text = stringResource(R.string.rtsp_video_resize_image, sliderPosition))
+        Text(text = stringResource(R.string.rtsp_video_resize_image, selectedResizePercent))
 
         Row(modifier = Modifier.fillMaxWidth()) {
-            Text(text = stringResource(R.string.rtsp_video_resize_image_10), modifier = Modifier.align(Alignment.CenterVertically))
+            Text(text = "${RESIZE_STOPS_PERCENT.first().roundToInt()}%", modifier = Modifier.align(Alignment.CenterVertically))
             Slider(
                 value = sliderPosition,
                 onValueChange = {
                     sliderPosition = it
-                    currentResultSize = IntSize((screenSize.width * it / 100F).roundToInt(), (screenSize.height * it / 100F).roundToInt())
+                    val selected = RESIZE_STOPS_PERCENT[it.roundToInt().coerceIn(0, RESIZE_STOPS_PERCENT.lastIndex)]
+                    currentResultSize = IntSize((screenSize.width * selected / 100F).roundToInt(), (screenSize.height * selected / 100F).roundToInt())
                 },
                 enabled = enabled,
                 modifier = Modifier
                     .padding(horizontal = 8.dp)
                     .weight(1f)
                     .align(Alignment.CenterVertically),
-                valueRange = 10F..100F,
-                onValueChangeFinished = { onValueChange.invoke(sliderPosition); scope.launch { delay(250); counter = counter + 1 } }
+                valueRange = 0f..RESIZE_STOPS_PERCENT.lastIndex.toFloat(),
+                steps = (RESIZE_STOPS_PERCENT.size - 2).coerceAtLeast(0),
+                onValueChangeFinished = {
+                    val selected = RESIZE_STOPS_PERCENT[sliderPosition.roundToInt().coerceIn(0, RESIZE_STOPS_PERCENT.lastIndex)]
+                    onValueChange.invoke(selected)
+                    scope.launch { delay(250); counter += 1 }
+                }
             )
-            Text(text = stringResource(R.string.rtsp_video_resize_image_100), modifier = Modifier.align(Alignment.CenterVertically))
+            Text(text = "${RESIZE_STOPS_PERCENT.last().roundToInt()}%", modifier = Modifier.align(Alignment.CenterVertically))
         }
 
         Row(
@@ -320,13 +340,20 @@ private fun Fps(
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier) {
-        var sliderPosition by remember(fpsRange, fps) { mutableFloatStateOf(fps.coerceIn(fpsRange).toFloat()) }
+    val allowedFpsStops = remember(fpsRange) {
+        FPS_STOPS.filter { it in fpsRange }.ifEmpty { listOf(fps.coerceIn(fpsRange)) }
+    }
 
-        Text(text = stringResource(R.string.rtsp_video_frame_rate, sliderPosition.roundToInt()))
+    Column(modifier = modifier) {
+        var sliderPosition by remember(allowedFpsStops, fps) {
+            mutableFloatStateOf(nearestIndex(allowedFpsStops, fps.coerceIn(fpsRange)).toFloat())
+        }
+        val selectedFps = allowedFpsStops[sliderPosition.roundToInt().coerceIn(0, allowedFpsStops.lastIndex)]
+
+        Text(text = stringResource(R.string.rtsp_video_frame_rate, selectedFps))
 
         Row(modifier = Modifier.fillMaxWidth()) {
-            Text(text = fpsRange.start.toString(), modifier = Modifier.align(Alignment.CenterVertically))
+            Text(text = allowedFpsStops.first().toString(), modifier = Modifier.align(Alignment.CenterVertically))
             Slider(
                 value = sliderPosition,
                 onValueChange = { sliderPosition = it },
@@ -335,10 +362,14 @@ private fun Fps(
                     .weight(1f)
                     .align(Alignment.CenterVertically),
                 enabled = enabled,
-                valueRange = fpsRange.start.toFloat()..fpsRange.endInclusive.toFloat(),
-                onValueChangeFinished = { onValueChange.invoke(sliderPosition.roundToInt()) }
+                valueRange = 0f..allowedFpsStops.lastIndex.toFloat(),
+                steps = (allowedFpsStops.size - 2).coerceAtLeast(0),
+                onValueChangeFinished = {
+                    val selected = allowedFpsStops[sliderPosition.roundToInt().coerceIn(0, allowedFpsStops.lastIndex)]
+                    onValueChange.invoke(selected)
+                }
             )
-            Text(text = fpsRange.endInclusive.toString(), modifier = Modifier.align(Alignment.CenterVertically))
+            Text(text = allowedFpsStops.last().toString(), modifier = Modifier.align(Alignment.CenterVertically))
         }
     }
 }
@@ -351,24 +382,32 @@ private fun Bitrate(
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val allowedBitrateStops = remember(bitrateRangeKbits) {
+        BITRATE_STOPS_KBITS.filter { it in bitrateRangeKbits }.ifEmpty { listOf((bitrateBits / 1000).coerceIn(bitrateRangeKbits)) }
+    }
+
     Column(modifier = modifier) {
         var isDragging by remember { mutableStateOf(false) }
-        var sliderPosition by remember { mutableFloatStateOf((bitrateBits / 1000).coerceIn(bitrateRangeKbits).toFloat()) }
+        var sliderPosition by remember(allowedBitrateStops, bitrateBits, bitrateRangeKbits) {
+            mutableFloatStateOf(nearestIndex(allowedBitrateStops, (bitrateBits / 1000).coerceIn(bitrateRangeKbits)).toFloat())
+        }
 
-        LaunchedEffect(bitrateBits, bitrateRangeKbits) {
+        LaunchedEffect(bitrateBits, bitrateRangeKbits, allowedBitrateStops) {
             if (!isDragging) {
-                sliderPosition = (bitrateBits / 1000).coerceIn(bitrateRangeKbits).toFloat()
+                sliderPosition = nearestIndex(allowedBitrateStops, (bitrateBits / 1000).coerceIn(bitrateRangeKbits)).toFloat()
             }
         }
 
+        val selectedBitrateKbits = allowedBitrateStops[sliderPosition.roundToInt().coerceIn(0, allowedBitrateStops.lastIndex)]
+
         Text(
-            text = stringResource(R.string.rtsp_video_bitrate, sliderPosition.roundToInt().toKOrMBitString()),
+            text = stringResource(R.string.rtsp_video_bitrate, selectedBitrateKbits.toKOrMBitString()),
             modifier = Modifier
         )
 
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = bitrateRangeKbits.start.toKOrMBitString(),
+                text = allowedBitrateStops.first().toKOrMBitString(),
                 modifier = Modifier.align(Alignment.CenterVertically)
             )
             Slider(
@@ -382,14 +421,16 @@ private fun Bitrate(
                     .weight(1f)
                     .align(Alignment.CenterVertically),
                 enabled = enabled,
-                valueRange = bitrateRangeKbits.start.toFloat()..bitrateRangeKbits.endInclusive.toFloat(),
+                valueRange = 0f..allowedBitrateStops.lastIndex.toFloat(),
+                steps = (allowedBitrateStops.size - 2).coerceAtLeast(0),
                 onValueChangeFinished = {
                     isDragging = false
-                    onValueChange.invoke((sliderPosition * 1000).roundToInt())
+                    val selected = allowedBitrateStops[sliderPosition.roundToInt().coerceIn(0, allowedBitrateStops.lastIndex)]
+                    onValueChange.invoke(selected * 1000)
                 }
             )
             Text(
-                text = bitrateRangeKbits.endInclusive.toKOrMBitString(),
+                text = allowedBitrateStops.last().toKOrMBitString(),
                 modifier = Modifier.align(Alignment.CenterVertically)
             )
         }

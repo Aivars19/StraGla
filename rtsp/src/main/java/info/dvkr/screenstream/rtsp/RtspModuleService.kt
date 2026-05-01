@@ -110,12 +110,7 @@ public class RtspModuleService : StreamingModuleService() {
 
     internal fun showErrorNotification(error: RtspError) {
         if (error is RtspError.NotificationPermissionRequired) return
-
-        if (error is RtspError.ServerError.AddressNotFoundException) {
-            XLog.w(getLog("showErrorNotification", error.toString(this)))
-        } else {
-            XLog.e(getLog("showErrorNotification"), error)
-        }
+        XLog.e(getLog("showErrorNotification"), error)
 
         showErrorNotification(
             message = error.toString(this),

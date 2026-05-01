@@ -42,8 +42,6 @@ import info.dvkr.screenstream.rtsp.settings.RtspSettings
 import info.dvkr.screenstream.rtsp.ui.main.cards.AudioCard
 import info.dvkr.screenstream.rtsp.ui.main.cards.ClientSettingsCard
 import info.dvkr.screenstream.rtsp.ui.main.cards.ErrorCard
-import info.dvkr.screenstream.rtsp.ui.main.cards.ModeCard
-import info.dvkr.screenstream.rtsp.ui.main.cards.ServerSettingsCard
 import info.dvkr.screenstream.rtsp.ui.main.cards.VideoCard
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -66,7 +64,6 @@ internal fun RtspMainScreenUI(
     val context = LocalContext.current
     val state = rtspState.value
     val settings = rtspSettingsState.value
-    val selectedMode = settings.mode
     val updateSettings: (RtspSettings.Data.() -> RtspSettings.Data) -> Unit = { transform ->
         scope.launch { rtspSettings.updateData(transform) }
     }
@@ -77,8 +74,8 @@ internal fun RtspMainScreenUI(
             startAttemptId = state.startAttemptId?.takeIf { state.waitingCastPermission },
             isStreaming = state.isStreaming,
             onStartRequested = { educationShown -> sendEvent(RtspStreamingService.InternalEvent.StartStream(permissionEducationShown = educationShown)) },
-            onPermissionGranted = { startAttemptId, intent -> if (state.startAttemptId == startAttemptId) onProjectionGranted(startAttemptId, intent) },
-            onPermissionDenied = { startAttemptId -> if (state.startAttemptId == startAttemptId) sendEvent(RtspEvent.CastPermissionsDenied(startAttemptId)) },
+            onPermissionGranted = onProjectionGranted,
+            onPermissionDenied = { startAttemptId -> sendEvent(RtspEvent.CastPermissionsDenied(startAttemptId)) },
         )
 
         val lazyVerticalStaggeredGridState = rememberLazyStaggeredGridState()
@@ -88,7 +85,7 @@ internal fun RtspMainScreenUI(
             state = lazyVerticalStaggeredGridState,
             contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 64.dp),
         ) {
-            if (state.error is RtspError.UnknownError || state.error is RtspError.NotificationPermissionRequired) {
+            if (state.error != null) {
                 item(key = "ERROR") {
                     ErrorCard(
                         error = state.error,
@@ -101,39 +98,14 @@ internal fun RtspMainScreenUI(
                 }
             }
 
-            item(key = "MODE") {
-                ModeCard(
-                    sendEvent = sendEvent,
-                    selectedMode = selectedMode,
-                    onModeSelected = { mode -> updateSettings { copy(mode = mode) } },
-                    isStreaming = state.isStreaming,
-                    serverBindings = state.serverBindings,
-                    clientStatus = state.clientStatus,
-                    error = state.error,
+            item(key = "CLIENT_PARAMETERS") {
+                ClientSettingsCard(
+                    settings = settings,
+                    updateSettings = updateSettings,
+                    windowWidthSizeClass = windowWidthSizeClass,
+                    enabled = state.isStreaming.not(),
                     modifier = Modifier.padding(8.dp)
                 )
-            }
-            if (selectedMode == RtspSettings.Values.Mode.SERVER) {
-                item(key = "SERVER_PARAMETERS") {
-                    ServerSettingsCard(
-                        settings = settings,
-                        updateSettings = updateSettings,
-                        windowWidthSizeClass = windowWidthSizeClass,
-                        enabled = state.isStreaming.not(),
-                        modifier = Modifier.padding(8.dp)
-                    )
-                }
-            }
-            if (selectedMode == RtspSettings.Values.Mode.CLIENT) {
-                item(key = "CLIENT_PARAMETERS") {
-                    ClientSettingsCard(
-                        settings = settings,
-                        updateSettings = updateSettings,
-                        windowWidthSizeClass = windowWidthSizeClass,
-                        enabled = state.isStreaming.not(),
-                        modifier = Modifier.padding(8.dp)
-                    )
-                }
             }
             item(key = "VIDEO") {
                 VideoCard(
@@ -161,8 +133,7 @@ internal fun RtspMainScreenUI(
 
         val doubleClickProtection = remember { DoubleClickProtection.get() }
 
-        val mediaServerUrlError = selectedMode == RtspSettings.Values.Mode.CLIENT &&
-                runCatching { RtspUrl.parse(settings.serverAddress) }.isFailure
+        val mediaServerUrlError = runCatching { RtspUrl.parse(settings.serverAddress) }.isFailure
 
         Button(
             onClick = dropUnlessStarted {
