@@ -83,7 +83,7 @@ internal class NotificationHelperImpl(context: Context) : NotificationHelper {
             .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
             .putExtra(Settings.EXTRA_CHANNEL_ID, notificationManager.getNotificationChannel(CHANNEL_STREAMING).id)
 
-    override fun createForegroundNotification(context: Context, stopIntent: Intent): Notification {
+    override fun createForegroundNotification(context: Context, stopIntent: Intent, contentText: String): Notification {
         XLog.d(getLog("createForegroundNotification", "context: ${context::class.java.simpleName}#${context.hashCode()}"))
 
         return NotificationCompat.Builder(context, CHANNEL_STREAMING)
@@ -92,8 +92,9 @@ internal class NotificationHelperImpl(context: Context) : NotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setLargeIcon(largeIcon)
             .setOngoing(true)
+            .setOnlyAlertOnce(true)
             .setContentTitle(context.getString(R.string.app_notification_streaming_title))
-            .setContentText(context.getString(R.string.app_notification_streaming_content))
+            .setContentText(contentText)
             .setSmallIcon(R.drawable.ic_notification_small_anim_24dp)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setContentIntent(PendingIntent.getActivity(context, 0, SingleActivity.getIntent(context), PendingIntent.FLAG_IMMUTABLE))

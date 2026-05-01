@@ -59,9 +59,14 @@ public abstract class StreamingModuleService : Service() {
     }
 
     @SuppressLint("InlinedApi")
-    protected fun startForeground(stopIntent: Intent, serviceType: Int) {
-        val notification = notificationHelper.createForegroundNotification(this, stopIntent)
+    protected fun startForeground(stopIntent: Intent, serviceType: Int, contentText: String) {
+        val notification = notificationHelper.createForegroundNotification(this, stopIntent, contentText)
         ServiceCompat.startForeground(this, notificationIdForeground, notification, serviceType)
+    }
+
+    protected fun updateForegroundNotification(stopIntent: Intent, contentText: String) {
+        val notification = notificationHelper.createForegroundNotification(this, stopIntent, contentText)
+        notificationHelper.showNotification(notificationIdForeground, notification)
     }
 
     public fun stopForeground() {

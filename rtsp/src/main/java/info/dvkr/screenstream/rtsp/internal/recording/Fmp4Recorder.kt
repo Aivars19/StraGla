@@ -207,7 +207,7 @@ internal class Fmp4Recorder(
 
     private fun buildFileName(): String {
         val timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss", Locale.US).format(Date())
-        return "${timestamp}.fmp4"
+        return "${timestamp}"
     }
 
     private fun createOutputTarget(context: Context, fileName: String): OutputTarget {

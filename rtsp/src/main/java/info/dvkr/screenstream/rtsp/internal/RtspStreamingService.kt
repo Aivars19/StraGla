@@ -289,6 +289,7 @@ internal class RtspStreamingService(
                 is InternalEvent.RtspClient.OnConnectionSuccess -> {
                     status = RtspClientStatus.ACTIVE
                     currentError = null
+                    service.updateStreamingBitrateNotification(bitsPerSecond = 0)
                 }
 
                 is InternalEvent.RtspClient.OnDisconnect -> {
@@ -296,7 +297,11 @@ internal class RtspStreamingService(
                     status = RtspClientStatus.IDLE
                 }
 
-                is InternalEvent.RtspClient.OnBitrate -> Unit //TODO Skip for now
+                is InternalEvent.RtspClient.OnBitrate -> {
+                    if (status == RtspClientStatus.ACTIVE) {
+                        service.updateStreamingBitrateNotification(event.bitrate)
+                    }
+                }
 
                 is InternalEvent.RtspClient.OnError -> {
                     stopStream(stopServer = true, stopReason = "RtspClientError")

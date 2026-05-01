@@ -18,7 +18,7 @@ public interface NotificationHelper {
 
     public fun getStreamNotificationSettingsIntent(): Intent
 
-    public fun createForegroundNotification(context: Context, stopIntent: Intent): Notification
+    public fun createForegroundNotification(context: Context, stopIntent: Intent, contentText: String): Notification
 
     public fun getErrorNotification(context: Context, message: String, recoverIntent: Intent): Notification
 

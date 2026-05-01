@@ -104,8 +104,24 @@ public class RtspModuleService : StreamingModuleService() {
 
         startForeground(
             RtspEvent.Intentable.StopStream("RtspModuleService. User action: Notification").toIntent(this),
-            fgsType
+            fgsType,
+            getString(R.string.rtsp_notification_streaming_content)
         )
+    }
+
+    internal fun updateStreamingNotification(contentText: String) {
+        if (notificationHelper.notificationPermissionGranted(this).not()) return
+        if (notificationHelper.foregroundNotificationsEnabled().not()) return
+
+        updateForegroundNotification(
+            RtspEvent.Intentable.StopStream("RtspModuleService. User action: Notification").toIntent(this),
+            contentText
+        )
+    }
+
+    internal fun updateStreamingBitrateNotification(bitsPerSecond: Long) {
+        val mbitPerSecond = bitsPerSecond / 1_000_000.0
+        updateStreamingNotification(getString(R.string.rtsp_notification_streaming_speed, mbitPerSecond))
     }
 
     internal fun showErrorNotification(error: RtspError) {

@@ -22,6 +22,8 @@
 
     <string name="rtsp_stream_start">Start stream</string>
     <string name="rtsp_stream_stop">Stop stream</string>
+    <string name="rtsp_notification_streaming_content">Press STOP to finish stream</string>
+    <string name="rtsp_notification_streaming_speed">Speed: %1$.2f Mbit/s</string>
 
     <string name="rtsp_error_notification_permission_required">Application requires notifications to be enabled to start streaming service.\nPlease enable notifications in application settings.</string>
     <string name="rtsp_error_unspecified">Something went wrong.</string>
