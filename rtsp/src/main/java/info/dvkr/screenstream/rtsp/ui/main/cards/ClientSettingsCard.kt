@@ -4,18 +4,26 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import info.dvkr.screenstream.common.module.StreamingModule
 import info.dvkr.screenstream.common.ui.ExpandableCard
@@ -25,6 +33,7 @@ import info.dvkr.screenstream.rtsp.settings.RtspSettings
 import info.dvkr.screenstream.rtsp.ui.main.settings.client.ClientProtocolEditor
 import info.dvkr.screenstream.rtsp.ui.main.settings.client.ClientProtocolRow
 import info.dvkr.screenstream.rtsp.ui.main.settings.common.RtspSettingModal
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +46,34 @@ internal fun ClientSettingsCard(
 ) {
     val selectedSheet = rememberSaveable { mutableStateOf<ClientSettingSheet?>(null) }
     val expanded = rememberSaveable { mutableStateOf(false) }
-    val serverAddressError = runCatching { RtspUrl.parse(settings.serverAddress) }.isFailure
+    val focusManager = LocalFocusManager.current
+
+    var serverAddressField by rememberSaveable(stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(TextFieldValue(settings.serverAddress))
+    }
+    var serverAddressFocused by rememberSaveable { mutableStateOf(false) }
+
+    fun commitServerAddress(value: String) {
+        if (settings.serverAddress != value) {
+            updateSettings { copy(serverAddress = value) }
+        }
+    }
+
+    // Keep local field in sync with external updates only when not actively editing.
+    LaunchedEffect(settings.serverAddress, serverAddressFocused) {
+        if (!serverAddressFocused && serverAddressField.text != settings.serverAddress) {
+            serverAddressField = TextFieldValue(settings.serverAddress)
+        }
+    }
+
+    // Persist with debounce during typing to avoid per-keystroke settings round-trips.
+    LaunchedEffect(serverAddressField.text, serverAddressFocused, enabled) {
+        if (!enabled || !serverAddressFocused || serverAddressField.text == settings.serverAddress) return@LaunchedEffect
+        delay(400)
+        commitServerAddress(serverAddressField.text)
+    }
+
+    val serverAddressError = runCatching { RtspUrl.parse(serverAddressField.text) }.isFailure
 
     ExpandableCard(
         expanded = expanded.value,
@@ -57,20 +93,28 @@ internal fun ClientSettingsCard(
         modifier = modifier
     ) {
         OutlinedTextField(
-            value = settings.serverAddress,
-            onValueChange = { serverAddress ->
-                if (settings.serverAddress != serverAddress) {
-                    updateSettings { copy(serverAddress = serverAddress) }
-                }
-            },
+            value = serverAddressField,
+            onValueChange = { serverAddressField = it },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .onFocusChanged {
+                    serverAddressFocused = it.isFocused
+                    if (!it.isFocused) commitServerAddress(serverAddressField.text)
+                },
             enabled = enabled,
             label = { Text(text = stringResource(R.string.rtsp_server_address)) },
             isError = serverAddressError,
             keyboardOptions = KeyboardOptions.Default.copy(
-                keyboardType = KeyboardType.Uri
+                keyboardType = KeyboardType.Uri,
+                imeAction = ImeAction.Done,
+                autoCorrectEnabled = false
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    commitServerAddress(serverAddressField.text)
+                    focusManager.clearFocus()
+                }
             ),
             singleLine = true
         )

@@ -50,6 +50,7 @@ internal fun StreamTabContent( //TODO Add foldable support
     streamingModulesManager: StreamingModuleManager = koinInject()
 ) {
     val activeModule = streamingModulesManager.activeModuleStateFlow.collectAsStateWithLifecycle()
+    val showModuleSelector = streamingModulesManager.modules.size > 1
     val windowWidthSizeClass = with(currentWindowAdaptiveInfo().windowSizeClass) {
         when {
             isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) -> StreamingModule.WindowWidthSizeClass.EXPANDED
@@ -62,13 +63,15 @@ internal fun StreamTabContent( //TODO Add foldable support
         val with = with(LocalDensity.current) { boundsInWindow.width.toDp() }
         if (with >= 800.dp) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1F), verticalArrangement = Arrangement.Center) {
-                    StreamingModuleSelector(
-                        streamingModulesManager = streamingModulesManager,
-                        modifier = Modifier
-                            .padding(top = 8.dp, start = 16.dp, end = 8.dp, bottom = 8.dp)
-                            .fillMaxWidth()
-                    )
+                if (showModuleSelector) {
+                    Column(modifier = Modifier.weight(1F), verticalArrangement = Arrangement.Center) {
+                        StreamingModuleSelector(
+                            streamingModulesManager = streamingModulesManager,
+                            modifier = Modifier
+                                .padding(top = 8.dp, start = 16.dp, end = 8.dp, bottom = 8.dp)
+                                .fillMaxWidth()
+                        )
+                    }
                 }
                 Column(modifier = Modifier.weight(1F)) {
                     AdaptiveBanner(modifier = Modifier.fillMaxWidth())
@@ -76,12 +79,14 @@ internal fun StreamTabContent( //TODO Add foldable support
             }
         } else {
             Column(modifier = Modifier.fillMaxWidth()) {
-                StreamingModuleSelector(
-                    streamingModulesManager = streamingModulesManager,
-                    modifier = Modifier
-                        .padding(top = 8.dp, start = 16.dp, end = 16.dp, bottom = 8.dp)
-                        .fillMaxWidth()
-                )
+                if (showModuleSelector) {
+                    StreamingModuleSelector(
+                        streamingModulesManager = streamingModulesManager,
+                        modifier = Modifier
+                            .padding(top = 8.dp, start = 16.dp, end = 16.dp, bottom = 8.dp)
+                            .fillMaxWidth()
+                    )
+                }
                 AdaptiveBanner(modifier = Modifier.fillMaxWidth())
             }
         }

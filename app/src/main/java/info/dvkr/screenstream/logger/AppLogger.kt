@@ -112,8 +112,8 @@ internal object AppLogger {
         val versions = "Device: ${Build.MANUFACTURER} ${Build.MODEL} [API:${Build.VERSION.SDK_INT}, Build:$version]"
         val emailIntent = Intent(Intent.ACTION_SEND)
             .setType("vnd.android.cursor.dir/email")
-            .putExtra(Intent.EXTRA_EMAIL, arrayOf("Dmytro Kryvoruchko <dkrivoruchko@gmail.com>"))
-            .putExtra(Intent.EXTRA_SUBJECT, "Screen Stream Logs ($version)")
+            .putExtra(Intent.EXTRA_EMAIL, arrayOf("ABC <abc@example.com>"))
+            .putExtra(Intent.EXTRA_SUBJECT, "StraGla Logs ($version)")
             .putExtra(Intent.EXTRA_TEXT, "$versions \n\n Issue description: \n\n $text")
             .putExtra(Intent.EXTRA_STREAM, fileUri)
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)

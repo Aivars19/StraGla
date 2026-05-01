@@ -4,7 +4,7 @@
     <style name="Theme.ScreenStream.Starting" parent="Theme.SplashScreen.IconBackground">
         <item name="windowSplashScreenBackground">@color/windowSplashScreenBackground</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
-        <item name="windowSplashScreenIconBackgroundColor">#32628D</item>
+        <item name="windowSplashScreenIconBackgroundColor">#960018</item>
         <item name="postSplashScreenTheme">@style/Theme.ScreenStream</item>
     </style>
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">ScreenStream</string>
+    <string name="app_name" translatable="false">StraGla</string>
 
     <string name="app_error_title">Error</string>
     <string name="app_error_recover">Recover</string>
@@ -65,13 +65,14 @@
     <string name="app_pref_logging_summary">Collect application logs</string>
 
     <string name="app_tab_about_app_version">Version: %1$s</string>
-    <string name="app_tab_about_developer_name">Developed by Dmytro Kryvoruchko</string>
+    <string name="app_tab_about_developer_name">Developed by ABC</string>
     <string name="app_tab_about_rate_app">Rate app</string>
     <string name="app_tab_about_write_email">Write email to developer</string>
     <string name="app_tab_about_email_chooser_header">Sending email…</string>
-    <string name="app_tab_about_app_sources">Application sources</string>
+    <string name="app_tab_about_app_sources">Project source</string>
     <string name="app_tab_about_terms_conditions">Terms and Conditions</string>
     <string name="app_tab_about_privacy_policy">Privacy policy</string>
     <string name="app_tab_about_privacy_options">Privacy options</string>
-    <string name="app_tab_about_license">License</string>
+    <string name="app_tab_about_license">Upstream license (original parts)</string>
+    <string name="app_tab_about_origin_note">Built as StraGla; original parts derived from ScreenStream.</string>
 </resources>

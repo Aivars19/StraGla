@@ -493,7 +493,6 @@ internal class RtspStreamingService(
         val isBusy = destroyPending || !settingsLoaded || initializedMode == null || projectionState.pendingStartAttemptId != null || errorBlocks || readinessBusy
 
         return RtspState(
-            mode = selectedMode,
             clientStatus = status,
             isBusy = isBusy,
             waitingCastPermission = projectionState.waitingForPermission,

@@ -6,14 +6,12 @@ import androidx.compose.runtime.Immutable
 import info.dvkr.screenstream.rtsp.R
 import info.dvkr.screenstream.rtsp.internal.AudioCodecInfo
 import info.dvkr.screenstream.rtsp.internal.VideoCodecInfo
-import info.dvkr.screenstream.rtsp.settings.RtspSettings
 
 @Immutable
 internal enum class RtspClientStatus { IDLE, STARTING, ACTIVE, ERROR }
 
 @Immutable
 internal data class RtspState(
-    val mode: RtspSettings.Values.Mode = RtspSettings.Default.MODE,
     val isBusy: Boolean = true,
     val waitingCastPermission: Boolean = false,
     val startAttemptId: String? = null,
@@ -24,7 +22,7 @@ internal data class RtspState(
     val error: RtspError? = null
 ) {
     override fun toString(): String =
-        "RtspState(mode=$mode busy=$isBusy wait=$waitingCastPermission start=$startAttemptId str=$isStreaming client=$clientStatus err=$error)"
+        "RtspState(busy=$isBusy wait=$waitingCastPermission start=$startAttemptId str=$isStreaming client=$clientStatus err=$error)"
 }
 
 @Immutable
