@@ -30,7 +30,7 @@ android {
         minSdk = rootProject.extra["minSdkVersion"] as Int
         targetSdk = rootProject.extra["targetSdkVersion"] as Int
         versionCode = 20260501
-        versionName = "0.0.20260501"
+        versionName = "0.0.20260502"
 
         // https://medium.com/@crafty/no-if-you-do-that-then-you-cant-use-newer-features-on-older-platforms-e-g-fa595333c0a4
         vectorDrawables.useSupportLibrary = true
@@ -38,6 +38,7 @@ android {
         ndk.abiFilters.addAll(listOf("armeabi-v7a", "x86", "arm64-v8a", "x86_64"))
     }
 
+    @Suppress("UnstableApiUsage")
     androidResources {
         generateLocaleConfig = true
     }
