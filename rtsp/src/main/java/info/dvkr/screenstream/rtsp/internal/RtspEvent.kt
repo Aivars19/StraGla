@@ -14,6 +14,7 @@ internal open class RtspEvent(val priority: Int) {
         internal const val RESTART_IGNORE: Int = 10
         internal const val RECOVER_IGNORE: Int = 20
         internal const val START_PROJECTION: Int = 21
+        internal const val RETRY_RTSP: Int = 22
         internal const val DESTROY_IGNORE: Int = 30
     }
 

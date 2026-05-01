@@ -252,6 +252,7 @@ internal class RtspStreamingService(
 
         private var client: RtspClient? = null
         private var generation: Long = 0L
+        private var reconnectAttempts: Long = 0L
 
         fun startClient(rtspUrl: RtspUrl, onlyVideo: Boolean) {
             currentError = null
@@ -289,12 +290,15 @@ internal class RtspStreamingService(
                 is InternalEvent.RtspClient.OnConnectionSuccess -> {
                     status = RtspClientStatus.ACTIVE
                     currentError = null
+                    reconnectAttempts = 0L
                     service.updateStreamingBitrateNotification(bitsPerSecond = 0)
                 }
 
                 is InternalEvent.RtspClient.OnDisconnect -> {
-                    stopStream(stopServer = true, stopReason = "RtspClientDisconnect")
-                    status = RtspClientStatus.IDLE
+                    handleTransportFailure(
+                        stopReason = "RtspClientDisconnect",
+                        error = RtspError.ClientError.Failed("Disconnected")
+                    )
                 }
 
                 is InternalEvent.RtspClient.OnBitrate -> {
@@ -304,11 +308,29 @@ internal class RtspStreamingService(
                 }
 
                 is InternalEvent.RtspClient.OnError -> {
-                    stopStream(stopServer = true, stopReason = "RtspClientError")
-                    status = RtspClientStatus.ERROR
-                    currentError = event.error
+                    handleTransportFailure(
+                        stopReason = "RtspClientError",
+                        error = event.error
+                    )
                 }
             }
+        }
+
+        private fun handleTransportFailure(stopReason: String, error: RtspError.ClientError) {
+            if (!shouldKeepRecordingWhileRetryingRtsp()) {
+                stopStream(stopServer = true, stopReason = stopReason)
+                status = RtspClientStatus.ERROR
+                currentError = error
+                return
+            }
+
+            XLog.w(getLog("RtspClientController.handleTransportFailure", "$stopReason while local recording continues; scheduling RTSP retry"))
+            stop()
+            status = RtspClientStatus.ERROR
+            currentError = error
+            reconnectAttempts += 1
+            service.updateStreamingBitrateNotification(bitsPerSecond = 0)
+            sendEvent(InternalEvent.RetryRtspClient(reconnectAttempts), timeout = RTSP_RECONNECT_DELAY_MS)
         }
 
         fun setVideoParams(video: VideoParams) {
@@ -340,6 +362,7 @@ internal class RtspStreamingService(
         }
 
         data class CapturedContentResize(val width: Int, val height: Int) : InternalEvent(Priority.RECOVER_IGNORE)
+        data class RetryRtspClient(val attempt: Long) : InternalEvent(Priority.RETRY_RTSP)
         data class Error(val error: RtspError) : InternalEvent(Priority.RECOVER_IGNORE)
         data class Destroy(val destroyJob: CompletableJob) : InternalEvent(Priority.DESTROY_IGNORE)
 
@@ -380,6 +403,10 @@ internal class RtspStreamingService(
 
     init {
         XLog.d(getLog("init"))
+    }
+
+    private companion object {
+        private const val RTSP_RECONNECT_DELAY_MS: Long = 3_000
     }
 
     @MainThread
@@ -470,12 +497,14 @@ internal class RtspStreamingService(
             handler.removeMessages(RtspEvent.Priority.RESTART_IGNORE)
             handler.removeMessages(RtspEvent.Priority.RECOVER_IGNORE)
             handler.removeMessages(RtspEvent.Priority.START_PROJECTION)
+            handler.removeMessages(RtspEvent.Priority.RETRY_RTSP)
         }
         if (event is InternalEvent.Destroy) {
             handler.removeMessages(RtspEvent.Priority.RESTART_IGNORE)
             handler.removeMessages(RtspEvent.Priority.RECOVER_IGNORE)
             handler.removeMessages(RtspEvent.Priority.DESTROY_IGNORE)
             handler.removeMessages(RtspEvent.Priority.START_PROJECTION)
+            handler.removeMessages(RtspEvent.Priority.RETRY_RTSP)
         }
         if (event is RtspEvent.StartProjection) {
             if (handler.hasMessages(RtspEvent.Priority.START_PROJECTION)) {
@@ -483,13 +512,18 @@ internal class RtspStreamingService(
             }
             handler.removeMessages(RtspEvent.Priority.START_PROJECTION)
         }
+        if (event is InternalEvent.RetryRtspClient) {
+            if (handler.hasMessages(RtspEvent.Priority.RETRY_RTSP)) {
+                XLog.i(getLog("sendEvent", "Replacing pending RetryRtspClient"))
+            }
+            handler.removeMessages(RtspEvent.Priority.RETRY_RTSP)
+        }
 
         val wasSent = handler.sendMessageDelayed(handler.obtainMessage(event.priority, event), timeout)
         if (!wasSent) XLog.e(getLog("sendEvent", "Failed to send event: $event"))
     }
 
     private fun buildViewState(): RtspState {
-        val selectedMode = RtspSettings.Values.Mode.CLIENT
         val status = clientController?.status ?: RtspClientStatus.IDLE
         val audioEnabled = rtspSettings.data.value.enableMic || rtspSettings.data.value.enableDeviceAudio
         val clientReady = clientController != null
@@ -1157,16 +1191,68 @@ internal class RtspStreamingService(
                 resizeActor?.offer(sourceWidth = event.width, sourceHeight = event.height)
             }
 
+            is InternalEvent.RetryRtspClient -> {
+                if (!shouldKeepRecordingWhileRetryingRtsp()) {
+                    XLog.d(getLog("RetryRtspClient", "No active local recording session. Ignoring attempt=${event.attempt}"))
+                    return
+                }
+
+                val settings = rtspSettings.data.value
+                if (!settings.enableRtspOutput) {
+                    XLog.d(getLog("RetryRtspClient", "RTSP output disabled. Ignoring attempt=${event.attempt}"))
+                    return
+                }
+
+                val rtspUrl = try {
+                    RtspUrl.parse(settings.serverAddress)
+                } catch (e: URISyntaxException) {
+                    XLog.w(getLog("RetryRtspClient", "Bad RTSP URL during retry: ${settings.serverAddress}"), e)
+                    currentError = RtspError.ClientError.Failed(e.reason ?: e.message)
+                    return
+                }
+
+                val clientController = clientController ?: run {
+                    XLog.w(getLog("RetryRtspClient", "Client controller is null. Reinitializing."))
+                    sendEvent(InternalEvent.InitState(clearIntent = false, mode = RtspSettings.Values.Mode.CLIENT))
+                    sendEvent(event, timeout = RTSP_RECONNECT_DELAY_MS)
+                    return
+                }
+
+                if (clientController.status == RtspClientStatus.ACTIVE || clientController.status == RtspClientStatus.STARTING) {
+                    XLog.d(getLog("RetryRtspClient", "Client already active/starting. Ignoring attempt=${event.attempt}"))
+                    return
+                }
+
+                val onlyVideo = projectionState.lastAudioParams == null
+                XLog.i(getLog("RetryRtspClient", "Retrying RTSP attempt=${event.attempt}, onlyVideo=$onlyVideo"))
+                clientController.startClient(rtspUrl, onlyVideo)
+                projectionState.lastVideoParams?.let { clientController.setVideoParams(it) }
+                clientController.setAudioParams(projectionState.lastAudioParams)
+                clientController.connect()
+            }
+
             is RtspEvent.Intentable.StopStream -> stopStream(stopServer = false, stopReason = event.reason)
 
-            is RtspEvent.Intentable.RecoverError,
+            is RtspEvent.Intentable.RecoverError -> {
+                if (shouldKeepRecordingWhileRetryingRtsp()) {
+                    currentError = null
+                    sendEvent(InternalEvent.RetryRtspClient(attempt = 0L))
+                    return
+                }
+
+                val stopReason = "RecoverError"
+                stopStream(stopServer = true, stopReason = stopReason)
+                handler.removeMessages(RtspEvent.Priority.RECOVER_IGNORE)
+                handler.removeMessages(RtspEvent.Priority.START_PROJECTION)
+                val mode = RtspSettings.Values.Mode.CLIENT
+                sendEvent(InternalEvent.InitState(clearIntent = true, mode = mode))
+            }
+
             is InternalEvent.Destroy,
             is InternalEvent.Error -> {
                 val stopReason = when (event) {
-                    is RtspEvent.Intentable.RecoverError -> "RecoverError"
                     is InternalEvent.Destroy -> "Destroy"
                     is InternalEvent.Error -> "InternalError"
-                    else -> null
                 }
                 if (event is InternalEvent.Destroy) {
                     sessionAnalyticsTracker.onStartAborted()
@@ -1178,12 +1264,6 @@ internal class RtspStreamingService(
                     clientController?.status = RtspClientStatus.ERROR
                 }
 
-                if (event is RtspEvent.Intentable.RecoverError) {
-                    handler.removeMessages(RtspEvent.Priority.RECOVER_IGNORE)
-                    handler.removeMessages(RtspEvent.Priority.START_PROJECTION)
-                    val mode = RtspSettings.Values.Mode.CLIENT
-                    sendEvent(InternalEvent.InitState(clearIntent = true, mode = mode))
-                }
             }
 
             is InternalEvent.RtspClient -> {
@@ -1223,6 +1303,7 @@ internal class RtspStreamingService(
 
         resizeActor?.close()
         resizeActor = null
+        handler.removeMessages(RtspEvent.Priority.RETRY_RTSP)
         projectionState.pendingStartAttemptId = null
         projectionState.waitingForPermission = false
 
@@ -1246,6 +1327,11 @@ internal class RtspStreamingService(
         }
 
         service.stopForeground()
+    }
+
+    private fun shouldKeepRecordingWhileRetryingRtsp(): Boolean {
+        val activeProjection = projectionState.active ?: return false
+        return rtspSettings.data.value.enableRtspOutput && activeProjection.fileRecorder != null
     }
 
     // Inline Only
