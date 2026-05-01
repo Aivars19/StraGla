@@ -26,7 +26,7 @@ android {
     ndkVersion = rootProject.extra["ndkVersion"] as String
 
     defaultConfig {
-        applicationId = "info.dvkr.screenstream"
+        applicationId = "info.abc.stragla"
         minSdk = rootProject.extra["minSdkVersion"] as Int
         targetSdk = rootProject.extra["targetSdkVersion"] as Int
         versionCode = 20260501
