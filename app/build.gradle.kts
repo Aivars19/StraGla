@@ -29,8 +29,8 @@ android {
         applicationId = "info.abc.stragla"
         minSdk = rootProject.extra["minSdkVersion"] as Int
         targetSdk = rootProject.extra["targetSdkVersion"] as Int
-        versionCode = 20260501
-        versionName = "0.0.20260502"
+        versionCode = 20260503
+        versionName = "0.1.20260503"
 
         // https://medium.com/@crafty/no-if-you-do-that-then-you-cant-use-newer-features-on-older-platforms-e-g-fa595333c0a4
         vectorDrawables.useSupportLibrary = true
