@@ -77,6 +77,9 @@ public fun AboutTabContent(
             text = stringResource(id = R.string.app_tab_about_developer_name),
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
+        Text(
+            text = "Straumēt un Glabāt (STRAGLA) versija"
+        )
 
         Column(modifier = Modifier.width(IntrinsicSize.Max)) {
             TextButton(
