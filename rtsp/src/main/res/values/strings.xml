@@ -49,6 +49,7 @@
     <string name="rtsp_video_video_size">Video size: %1$dx%2$d</string>
     <string name="rtsp_video_frame_rate">Frame rate: %1$d frames/sec</string>
     <string name="rtsp_video_bitrate">Video bitrate: %1$s/sec</string>
+    <string name="rtsp_video_bitrate_passable">Passable quality: %1$.1f Mbps</string>
     <string name="rtsp_video_bitrate_mbit">%.2f Mbit</string>
     <string name="rtsp_video_bitrate_kbit">%d Kbit</string>
 

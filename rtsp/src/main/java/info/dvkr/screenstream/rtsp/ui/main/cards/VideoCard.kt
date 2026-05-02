@@ -120,7 +120,7 @@ internal fun VideoCard(
             WindowMetricsCalculator.getOrCreate().computeMaximumWindowMetrics(context).bounds.toComposeIntRect().size
         }
 
-        val (resizeFactor, resizedWidth, resizedHeight) = remember(
+        val (_, resizedWidth, resizedHeight) = remember(
             screenSize, videoCapabilities, settings.videoResizeFactor
         ) {
             videoCapabilities.adjustResizeFactor(screenSize.width, screenSize.height, settings.videoResizeFactor / 100)
@@ -135,12 +135,12 @@ internal fun VideoCard(
         ImageSize(
             screenSize = screenSize,
             resultSize = IntSize(resizedWidth, resizedHeight),
-            resizeFactor = resizeFactor * 100,
+            resizeFactor = settings.videoResizeFactor,   // user's chosen %, not codec-clamped
             onValueChange = { newResizeFactor ->
-                val (resizeFactor, resizedWidth, resizedHeight) =
+                val (_, adjWidth, adjHeight) =
                     videoCapabilities.adjustResizeFactor(screenSize.width, screenSize.height, newResizeFactor / 100)
-                val fpsRange = videoCapabilities.getFrameRates(resizedWidth, resizedHeight)
-                updateSettings { copy(videoResizeFactor = resizeFactor * 100, videoFps = videoFps.coerceIn(fpsRange)) }
+                val fpsRange = videoCapabilities.getFrameRates(adjWidth, adjHeight)
+                updateSettings { copy(videoResizeFactor = newResizeFactor, videoFps = videoFps.coerceIn(fpsRange)) }
             },
             enabled = isStreaming.not(),
             modifier = Modifier
@@ -166,6 +166,18 @@ internal fun VideoCard(
             modifier = Modifier
                 .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
                 .fillMaxWidth()
+        )
+
+        val passableMbps = remember(resizedWidth, resizedHeight, settings.videoFps) {
+            val resMult = (resizedWidth.toLong() * resizedHeight) / (1920.0 * 1080.0)
+            val fpsMult = settings.videoFps / 30.0
+            6.0 * resMult * fpsMult
+        }
+        Text(
+            text = stringResource(R.string.rtsp_video_bitrate_passable, passableMbps),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
         )
     }
 }
