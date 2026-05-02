@@ -1,174 +1,60 @@
-![](docs/images/hero.png)
-# ScreenStream
 
-ScreenStream is a user-friendly Android application for streaming your device screen and audio. Use Local (MJPEG) or Global (WebRTC) mode to view the stream in a web browser, or use RTSP mode with a compatible RTSP client or player.
+# StraGla
 
-The Google Play version supports all modes: **Global mode (WebRTC)**, **Local mode (MJPEG)**, and **RTSP mode**, with ads included.<br>
-F-Droid versions are ad-free and support only **Local mode (MJPEG)** and **RTSP mode**.
+StraGla is a free and open-source Android application for **streaming and saving** your device screen and audio. 
+It is derived from the excelent original [ScreenStream](https://play.google.com/store/apps/details?id=info.dvkr.screenstream) application, but with major re-focus. 
 
-<a href='https://play.google.com/store/apps/details?id=info.dvkr.screenstream'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png' height="100"/></a> <a href="https://f-droid.org/packages/info.dvkr.screenstream/" target="_blank"><img src="https://f-droid.org/badge/get-it-on.png" alt="Get it on F-Droid" height="100"/></a>
+What StraGla does:
+- stream to rtsp/rtsps endpoint (such as mediamtx server)
+- save local file (mp4) with the same encoding as the stream
+- tolerate network outage - saving is not affected, streaming resumed when the network is back
 
-## Project support
+## rtsp / rtsps streaming endpoints
+You must have an rtsp/rtsps server to stream to. 
+Default addresses will look like this:
+- rtsp://server1:8554/stream_name1
+  - server1 - either dns name, or IP, or LAN name that maps to IP
+  - 8554 - default rtsp port, but depends on your server configuration
+  - stream_name1 - usually anything you want; some scenarios (youtube live) requires "secret key"
+- rtsps://server2:8322/stream_name2
+  - this is encrypted version of rtsp, so it requires TLS/SSL certificate on the server side; 
+  - server2 - normally this is DNS (public signed TLS).   
+## streaming resolution, framrate, bitrate 
+Network speed is critically important. Usually you will compromise for size and quality.
 
-If **ScreenStream** is useful to you and you want to support its development, you can use any of the options below.
+Approximate streaming quality guide, for h.264 codec, no audio:
 
-**Preferred (Tether Wallet / Tether.me):** `dmkr0@tether.me`
+| Mbps | 1080p30 | 1080p16 | 720p30 | 720p16 | 540p30 | 540p16 |
+|------|---------|---------|--------|--------|--------|--------|
+| 0.4 | 🟥 Unusable | 🟥 Unusable | 🟥 Unusable | 🟨 Passable | 🟨 Passable | 🟩 Good |
+| 0.8 | 🟥 Unusable | 🟥 Unusable | 🟨 Passable | 🟩 Good | 🟩 Good | 🟦 Perfect |
+| 1.2 | 🟥 Unusable | 🟨 Passable | 🟨 Passable | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect |
+| 1.6 | 🟥 Unusable | 🟩 Good | 🟩 Good | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect |
+| 2.0 | 🟨 Passable | 🟩 Good | 🟩 Good | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect |
+| 3.0 | 🟩 Good | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect |
+| 4.0 | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect |
+| 5.0 | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect |
 
-Tether Wallet supports Tether.me addresses as human-readable identifiers, so this is the simplest option if you already use Tether Wallet.
-
-If you prefer direct on-chain transfers, use one of these addresses:
-
-**USD₮ / USA₮ (Ethereum / ERC-20):** `0x5bb898c72dd3dD5E7f7A0Ab12854a60374B7c1dA`
-
-**BTC (on-chain):** `bc1q8wuv4esej0rdyn2jwkd93v7wvyep7uutzsmlh9`
-
-## Stream modes
-
-ScreenStream offers three stream modes: **Global mode (WebRTC)** (available only in the [Google Play Store](https://play.google.com/store/apps/details?id=info.dvkr.screenstream) version), **Local mode (MJPEG)**, and **RTSP mode**. All modes stream the Android device screen, but they function differently. Audio support is available in **Global mode (WebRTC)** and **RTSP mode** only. The modes are independent of each other and have different capabilities, restrictions, and customization options.
-
-| Mode                   | Transport | Audio | Internet required | Server side                                                   | Security                                     |
-|------------------------|-----------|-------|-------------------|---------------------------------------------------------------|----------------------------------------------|
-| **Local mode (MJPEG)**   | HTTP MJPEG | ✕     | No                    | Built-in                                                        | Optional 4-6 digit PIN                         |
-| **Global mode (WebRTC)** | WebRTC     | ✓     | Yes                   | Public signaling service at [screenstream.io](https://screenstream.io) | End-to-end encryption + password               |
-| **RTSP mode**            | RTSP<br>H.265/H.264<br>OPUS/AAC/G.711 | ✓ | No (server) / Depends (client) | Built‑in server (Server mode) / External server (client mode) | Client mode supports RTSP auth + RTSPS (TLS) |
-
-In **Global mode (WebRTC)** and **Local mode (MJPEG)**, the number of clients is not directly limited, but each client consumes CPU resources and bandwidth.
-
+## Codec
 ScreenStream uses Android's [MediaProjection](https://developer.android.com/reference/android/media/projection/MediaProjection) API and requires Android 6.0 or higher.
-
-> [!WARNING]
->
-> - **High traffic on mobile networks:** Streaming over 3G/4G/5G/LTE can consume a large amount of data.
-> 
-> - **Streaming delay:** Expect at least 0.5-1 second of delay, and potentially more on slower devices, unstable networks, or under heavy CPU load.
-> 
-> - **Not optimized for video playback:** ScreenStream is not designed for streaming video content, especially HD video, so playback quality may not meet your expectations.
-
-### Local mode (MJPEG)
-
-Local mode in the ScreenStream application is built on the MJPEG standard and utilizes an embedded HTTP server within the app. As a result, an internet connection is not required; instead, it can function on a local network, such as Wi-Fi, device hotspot, Network-over-USB, or any other network between the client's web browser and the Android device with the ScreenStream app.
-
-For optimal performance, a fast and stable network connection is recommended due to high traffic and low network delay requirements.
-
-In Local mode, the app processes each frame independently, one by one, enabling additional image transformations such as cropping, resizing, rotating, and more before sending the image to the client's web browser.
-
-The Local mode offers the following functionality:
-- Powered by MJPEG standard.
-- Utilizes PIN for security (no encryption).
-- Sends video as a series of independent images (no audio).
-- Works without an internet connection within your local network.
-- Embedded HTTP server.
-- Allows resizing by percentage or specifying an exact resolution.
-- Works with WiFi and/or mobile networks, supporting IPv4 and IPv6.
-- Clients connect via web browser using the app's provided IP address.
-- Highly customizable.
-- Individual data transmission for each client, with more clients requiring increased internet bandwidth to maintain optimal performance.
-
-> [!NOTE]
->
-> - Please be aware that certain cell operators may block incoming connections to your device for security reasons. Consequently, even if your device has an IP address from a cell operator, connecting to the device using this IP address may not be possible.
->
-> - Some WiFi networks, particularly public or guest networks, may block connections between its clients for security reasons. In such cases, connecting to the device via WiFi might not be feasible. For instance, a laptop and a phone within such a WiFi network will not be able to connect to each other.
-
-**Screenshots**
-
-<p>
-  <img src="docs/images/mjpeg-1.png" alt="Local mode main screen" width="270" />&nbsp;
-  <img src="docs/images/mjpeg-7.png" alt="Local mode activity and connected clients" width="270" />&nbsp;
-  <img src="docs/images/mjpeg-2.png" alt="Local mode information dialog" width="270" />
-</p>
-<p>
-  <img src="docs/images/mjpeg-3.png" alt="Local mode general parameters" width="270" />&nbsp;
-  <img src="docs/images/mjpeg-4.png" alt="Local mode image parameters" width="270" />&nbsp;
-  <img src="docs/images/mjpeg-5.png" alt="Local mode security parameters" width="270" />
-</p>
-<p align="center">
-  <img src="docs/images/mjpeg-6.png" alt="Local mode advanced parameters" width="290" />
-</p>
-
-### Global mode (WebRTC)
-
-Global mode in the ScreenStream application is built on WebRTC technology and relies on an external signaling server to facilitate communication between the streaming host (the app) and the streaming client, which is a web browser equipped with the ScreenStream [Web Client](https://screenstream.io).
-
-Both the signaling server and the web client for ScreenStream are open-source and available in the [ScreenStreamWeb](https://github.com/dkrivoruchko/ScreenStreamWeb) repository. These components are publicly available at [screenstream.io](https://screenstream.io). The system is designed to work with modern desktop and mobile browsers that support WebRTC, including Chrome, Safari, Edge, Firefox, and others.
-
-Global mode offers the following functionality:
-- Powered by WebRTC technology.
-- End-to-end encrypted communication.
-- Stream protection with password.
-- Supports both video and audio streaming.
-- Connect using unique stream ID and password.
-- Requires an internet connection for streaming.
-- Individual data transmission for each client, with more clients requiring increased internet bandwidth to maintain optimal performance.
-
-> [!NOTE]
-> Global mode (WebRTC) is available only in the Google Play version.
-
-**Screenshots**
-
-<p>
-  <img src="docs/images/webrtc-1.png" alt="Global mode main screen" width="270" />&nbsp;
-  <img src="docs/images/webrtc-2.png" alt="Global mode information dialog" width="270" />&nbsp;
-  <img src="docs/images/webrtc-3.png" alt="Global mode audio parameters" width="270" />
-</p>
-
-### RTSP mode
-
-RTSP mode in ScreenStream supports two sub‑modes: server mode (default) hosts this device as an RTSP server, while client mode connects to an external RTSP media server, providing compatibility with a wide range of standard RTSP clients.
-
-For optimal performance, a fast and stable network connection is recommended due to high traffic and low network delay requirements.
-
-- Powered by RTSP protocol.
-- Server mode (default) hosts device as an RTSP server.
-- Client mode connects to a remote RTSP server (e.g., MediaMTX).
-- Supports video and audio with codec configuration.
-- Server mode adds protocol, interface/address filters, IPv4/IPv6, and port settings.
-- Requires an RTSP client or player for viewing.
-- Tested with [VLC media player](https://www.videolan.org/vlc/), [FFplay](https://ffmpeg.org/ffplay.html), [mpv](https://mpv.io/), and [gst-play-1.0](https://gstreamer.freedesktop.org/) (GStreamer) players.
-
-> [!NOTE]
-> Client mode requires an RTSP‑capable media server (e.g., [MediaMTX](https://github.com/aler9/mediamtx)).
-
-**Screenshots**
-
-<p>
-  <img src="docs/images/rtsp-1.png" alt="RTSP mode main screen" width="270" />&nbsp;
-  <img src="docs/images/rtsp-2.png" alt="RTSP mode information dialog" width="270" />&nbsp;
-  <img src="docs/images/rtsp-3.png" alt="RTSP mode server parameters" width="270" />
-</p>
-<p align="center">
-  <img src="docs/images/rtsp-4.png" alt="RTSP mode video parameters" width="290" />&nbsp;
-  <img src="docs/images/rtsp-5.png" alt="RTSP mode audio parameters" width="290" />
-</p>
-
-## Contribution
-
-To contribute a translation, please translate the following five files:
-
-1. [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml)
-1. [common/src/main/res/values/strings.xml](common/src/main/res/values/strings.xml)
-1. [mjpeg/src/main/res/values/strings.xml](mjpeg/src/main/res/values/strings.xml)
-1. [webrtc/src/main/res/values/strings.xml](webrtc/src/main/res/values/strings.xml)
-1. [rtsp/src/main/res/values/strings.xml](rtsp/src/main/res/values/strings.xml)
-
-Please submit a [pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request). If that is not possible, you can send the translated files to the developer via e-mail <dkrivoruchko@gmail.com>.
-
-Your contribution helps make the application more accessible. Thank you for your efforts.
+video and audio codecs are dependent on the Android version and device capabilities.
 
 ## Developer
 
-Developed by [Dmytro Kryvoruchko](mailto:dkrivoruchko@gmail.com). If you have any issues or ideas, feel free to contact me.
+This is a side project for developer (Aivars19), no support is planned. Use "as is". 
 
 ## Privacy and Terms
 
-App [Privacy Policy](PrivacyPolicy.md) and [Terms & Conditions](TermsConditions.md)
+There are no ads, no analytics, no tracking, no data collection of any kind.
+
+There are no restrictions on the use of the app. 
 
 ## License
 
 ```
 The MIT License (MIT)
 
-Copyright (c) 2016 Dmytro Kryvoruchko
+Copyright (c) 2016 Dmytro Kryvoruchko (for original ScreenStream) 
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

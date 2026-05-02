@@ -6,14 +6,12 @@ import android.os.Build
 import android.os.StrictMode
 import com.elvishew.xlog.LogConfiguration
 import com.jakewharton.processphoenix.ProcessPhoenix
-import info.dvkr.screenstream.common.analytics.StreamingAnalytics
 import info.dvkr.screenstream.common.notification.NotificationHelper
 import info.dvkr.screenstream.logger.AppLogger
 import info.dvkr.screenstream.notification.NotificationHelperImpl
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
-import org.koin.dsl.bind
 import org.koin.dsl.module
 
 public abstract class BaseApp : Application() {
@@ -60,9 +58,7 @@ public abstract class BaseApp : Application() {
         AppLogger.init(this, ::configureLogger)
 
         val defaultModule = module {
-            single(createdAtStart = true) { AdMob(get()) }
-            single(createdAtStart = true) { AppStreamingAnalytics(get()) } bind (StreamingAnalytics::class)
-            single { NotificationHelperImpl(get()) } bind (NotificationHelper::class)
+            single<NotificationHelper> { NotificationHelperImpl(get()) }
         }
 
         startKoin {

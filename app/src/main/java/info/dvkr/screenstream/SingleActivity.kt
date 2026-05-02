@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.Lifecycle
@@ -28,7 +29,7 @@ import kotlinx.coroutines.flow.onStart
 import org.koin.android.ext.android.inject
 import kotlin.coroutines.cancellation.CancellationException
 
-public class SingleActivity : AppUpdateActivity() {
+public class SingleActivity : AppCompatActivity() {
 
     internal companion object {
         internal fun getIntent(context: Context): Intent = Intent(context, SingleActivity::class.java)
@@ -44,10 +45,9 @@ public class SingleActivity : AppUpdateActivity() {
 
         setContent {
             ScreenStreamTheme {
-                ScreenStreamContent(updateFlow = updateFlow)
+                ScreenStreamContent()
             }
         }
-        AppReview.startTracking(activity = this, streamingModulesManager = streamingModulesManager)
 
         appSettings.data.map { it.nightMode }
             .distinctUntilChanged()

@@ -22,6 +22,6 @@ public val RtspKoinModule: org.koin.core.module.Module = module {
     single(RtspKoinQualifier) { RtspStreamingModule() } bind (StreamingModule::class)
     single { RtspSettingsImpl(context = get()) } bind (RtspSettings::class)
     scope<RtspKoinScope> {
-        scoped { params -> RtspStreamingService(params.get(), params.get(), get(), null, get()) } bind (RtspStreamingService::class)
+        scoped { params -> RtspStreamingService(params.get(), params.get(), get(), null) } bind (RtspStreamingService::class)
     }
 }

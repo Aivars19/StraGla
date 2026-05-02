@@ -1,6 +1,5 @@
 package info.dvkr.screenstream.ui.tabs.stream
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,8 +23,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -33,7 +30,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowSizeClass
-import info.dvkr.screenstream.AdaptiveBanner
 import info.dvkr.screenstream.R
 import info.dvkr.screenstream.common.module.StreamingModule
 import info.dvkr.screenstream.common.module.StreamingModuleManager
@@ -45,7 +41,6 @@ import org.koin.compose.koinInject
 
 @Composable
 internal fun StreamTabContent( //TODO Add foldable support
-    boundsInWindow: Rect,
     modifier: Modifier = Modifier,
     streamingModulesManager: StreamingModuleManager = koinInject()
 ) {
@@ -60,35 +55,13 @@ internal fun StreamTabContent( //TODO Add foldable support
     }
 
     Column(modifier = modifier) {
-        val with = with(LocalDensity.current) { boundsInWindow.width.toDp() }
-        if (with >= 800.dp) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                if (showModuleSelector) {
-                    Column(modifier = Modifier.weight(1F), verticalArrangement = Arrangement.Center) {
-                        StreamingModuleSelector(
-                            streamingModulesManager = streamingModulesManager,
-                            modifier = Modifier
-                                .padding(top = 8.dp, start = 16.dp, end = 8.dp, bottom = 8.dp)
-                                .fillMaxWidth()
-                        )
-                    }
-                }
-                Column(modifier = Modifier.weight(1F)) {
-                    AdaptiveBanner(modifier = Modifier.fillMaxWidth())
-                }
-            }
-        } else {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                if (showModuleSelector) {
-                    StreamingModuleSelector(
-                        streamingModulesManager = streamingModulesManager,
-                        modifier = Modifier
-                            .padding(top = 8.dp, start = 16.dp, end = 16.dp, bottom = 8.dp)
-                            .fillMaxWidth()
-                    )
-                }
-                AdaptiveBanner(modifier = Modifier.fillMaxWidth())
-            }
+        if (showModuleSelector) {
+            StreamingModuleSelector(
+                streamingModulesManager = streamingModulesManager,
+                modifier = Modifier
+                    .padding(top = 8.dp, start = 16.dp, end = 16.dp, bottom = 8.dp)
+                    .fillMaxWidth()
+            )
         }
         activeModule.value?.StreamUIContent(
             windowWidthSizeClass = windowWidthSizeClass,

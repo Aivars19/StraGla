@@ -40,7 +40,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowSizeClass
-import info.dvkr.screenstream.AdaptiveBanner
 import info.dvkr.screenstream.R
 import info.dvkr.screenstream.common.notification.NotificationHelper
 import info.dvkr.screenstream.common.settings.AppSettings
@@ -88,7 +87,6 @@ internal fun SettingsTabContent(
         listPane = {
             AnimatedPane(modifier = Modifier.preferredWidth(listPanePreferredWidth)) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    AdaptiveBanner(modifier = Modifier.fillMaxWidth())
 
                     LazyColumn(
                         modifier = Modifier
