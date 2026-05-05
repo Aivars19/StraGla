@@ -26,13 +26,12 @@ Approximate streaming quality guide, for h.264 codec, no audio:
 
 | Mbps | 1080p30 | 1080p16 | 720p30 | 720p16 | 540p30 | 540p16 |
 |------|---------|---------|--------|--------|--------|--------|
-| 0.4 | 🟥 Unusable | 🟥 Unusable | 🟥 Unusable | 🟨 Passable | 🟨 Passable | 🟩 Good |
-| 0.8 | 🟥 Unusable | 🟥 Unusable | 🟨 Passable | 🟩 Good | 🟩 Good | 🟦 Perfect |
-| 1.2 | 🟥 Unusable | 🟨 Passable | 🟨 Passable | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect |
-| 1.6 | 🟥 Unusable | 🟩 Good | 🟩 Good | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect |
-| 2.0 | 🟨 Passable | 🟩 Good | 🟩 Good | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect |
-| 3.0 | 🟩 Good | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect |
-| 4.0 | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect |
+| 0.8 | 🟥 Unusable | 🟥 Unusable | 🟥 Unusable | 🟨 Passable | 🟨 Passable | 🟩 Good |
+| 1.2 | 🟥 Unusable | 🟥 Unusable | 🟨 Passable | 🟩 Good | 🟩 Good | 🟦 Perfect |
+| 1.6 | 🟥 Unusable | 🟨 Passable | 🟨 Passable | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect |
+| 2.0 | 🟥 Unusable | 🟩 Good | 🟩 Good | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect |
+| 3.0 | 🟨 Passable | 🟩 Good | 🟩 Good | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect |
+| 4.0 | 🟩 Good | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect |
 | 5.0 | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect | 🟦 Perfect |
 
 ## Codec
@@ -49,12 +48,15 @@ There are no ads, no analytics, no tracking, no data collection of any kind.
 
 There are no restrictions on the use of the app. 
 
-## License
+## Copyright
 
+For StraGla parts, Copyright 2026 github.com/Aivars19.
+
+For ScreenStream parts, which this project is based on, copyright (c) 2016 Dmytro Kryvoruchko. 
+
+## License
 ```
 The MIT License (MIT)
-
-Copyright (c) 2016 Dmytro Kryvoruchko (for original ScreenStream) 
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
