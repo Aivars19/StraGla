@@ -28,6 +28,3 @@ No method of transmission or storage is perfectly secure. Use secure endpoints a
 
 This policy may be updated over time. Continued use of StraGla means you accept the latest version.
 
-**Contact**
-
-For privacy-related questions, contact: ABC
