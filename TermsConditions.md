@@ -23,6 +23,4 @@ No separate license is asserted here for StraGla-specific additions.
 
 These terms may be updated from time to time. Continued use of the app means you accept the updated terms.
 
-**Contact**
 
-For questions, contact: ABC
